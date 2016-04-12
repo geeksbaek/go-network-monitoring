@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"sort"
 
 	"github.com/pivotal-golang/bytefmt"
@@ -35,7 +36,13 @@ func printSortedStatisticMap(stat map[string]uint64) {
 		if i >= 20 {
 			break
 		}
-		fmt.Fprintf(&b, "%15s = %s\n", k.Key, bytefmt.ByteSize(k.Value))
+		addr, err := net.LookupAddr(k.Key)
+		if err != nil {
+			fmt.Fprintf(&b, "%s = %s\n", k.Key, bytefmt.ByteSize(k.Value))
+		} else {
+			fmt.Fprintf(&b, "%s = %s\n", addr[0], bytefmt.ByteSize(k.Value))
+		}
+
 	}
 	fmt.Print(b.String())
 }
