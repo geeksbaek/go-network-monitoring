@@ -32,10 +32,10 @@ func printSortedStatisticMap(stat map[string]uint64) {
 	var b bytes.Buffer
 
 	for i, k := range p {
-		if i > 5 {
+		if i >= 20 {
 			break
 		}
-		fmt.Fprintf(&b, "%s = %s\n", k.Key, bytefmt.ByteSize(k.Value))
+		fmt.Fprintf(&b, "%15s = %s\n", k.Key, bytefmt.ByteSize(k.Value))
 	}
 	fmt.Print(b.String())
 }
