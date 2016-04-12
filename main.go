@@ -33,13 +33,13 @@ func main() {
 
 	// Use the handle as a packet source to process all packets
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-  ticker := time.Tick(1 * time.Second)
-  for {
-    select {
-      case packet := <- packetSource.Packets():      
-        fmt.Println(packet.String())
-      case <- ticker:
-        fmt.Println(".")
-    }
-  }
+	ticker := time.Tick(1 * time.Second)
+	for {
+		select {
+		case packet := <-packetSource.Packets():
+			fmt.Println(packet.String())
+		case <-ticker:
+			fmt.Println(".")
+		}
+	}
 }
