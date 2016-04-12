@@ -3,29 +3,29 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"time"
 
 	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 )
 
 var (
-	snapshot_len int32 = 1024
-	promiscuous  bool  = false
-	err          error
-	timeout      time.Duration = 30 * time.Second
-	handle       *pcap.Handle
+	dev              = `\Device\NPF_{669726D1-2173-4A7A-89DB-0843CDF048B3}`
+	snapshotLenInt32 = int32(1024)
+	promiscuous      = false
+	timeout          = 30 * time.Second
+	err              error
+	handle           *pcap.Handle
+
+	inboundTraffic  = make(map[string]uint64)
+	outboundTraffic = make(map[string]uint64)
 )
 
 func main() {
-	// Find all devices
-	devices, err := pcap.FindAllDevs()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Open device
-	handle, err = pcap.OpenLive(devices[7].Name, snapshot_len, promiscuous, timeout)
+	handle, err = pcap.OpenLive(dev, snapshotLenInt32, promiscuous, timeout)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,13 +33,31 @@ func main() {
 
 	// Use the handle as a packet source to process all packets
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	ticker := time.Tick(1 * time.Second)
+	everyOneSec := time.Tick(1 * time.Second)
+	everyTenSec := time.Tick(10 * time.Second)
 	for {
 		select {
 		case packet := <-packetSource.Packets():
-			fmt.Println(packet.String())
-		case <-ticker:
+			gotPacket(packet)
+		case <-everyOneSec:
 			fmt.Println(".")
+		case <-everyTenSec:
+			printSortedStatisticMap(inboundTraffic)
+		}
+	}
+}
+
+func gotPacket(packet gopacket.Packet) {
+	if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); ipv4Layer != nil {
+		ip, _ := ipv4Layer.(*layers.IPv4)
+		fmt.Printf("From %s to %s\n", ip.SrcIP, ip.DstIP)
+
+		traffic := len(packet.Data())
+
+		if ip.DstIP.Equal(net.IPv4(192, 168, 0, 3)) {
+			inboundTraffic[ip.SrcIP.String()] += uint64(traffic)
+		} else {
+			outboundTraffic[ip.DstIP.String()] += uint64(traffic)
 		}
 	}
 }
