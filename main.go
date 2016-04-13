@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
 	"time"
 
 	"github.com/google/gopacket"
@@ -18,9 +17,7 @@ var (
 	timeout     = 30 * time.Second
 	err         error
 	handle      *pcap.Handle
-
-	inboundTraffic  = make(map[string]uint64)
-	outboundTraffic = make(map[string]uint64)
+	statistic   = make(Statistic)
 )
 
 func main() {
@@ -33,14 +30,13 @@ func main() {
 
 	// Use the handle as a packet source to process all packets
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	everyOneSec := time.Tick(1 * time.Second)
+	ticker := time.Tick(time.Second * 3)
 	for {
 		select {
 		case packet := <-packetSource.Packets():
 			gotPacket(packet)
-		case <-everyOneSec:
-			fmt.Print("\033[H\033[2J")
-			printSortedStatisticMap(inboundTraffic)
+		case <-ticker:
+			fmt.Println(statistic.SortedString())
 		}
 	}
 }
@@ -49,10 +45,6 @@ func gotPacket(packet gopacket.Packet) {
 	if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); ipv4Layer != nil {
 		ip, _ := ipv4Layer.(*layers.IPv4)
 		traffic := len(packet.Data())
-		if ip.DstIP.Equal(net.IPv4(192, 168, 0, 3)) {
-			inboundTraffic[ip.SrcIP.String()] += uint64(traffic)
-		} else {
-			outboundTraffic[ip.DstIP.String()] += uint64(traffic)
-		}
+		statistic.SetTraffic(ip, uint64(traffic))
 	}
 }

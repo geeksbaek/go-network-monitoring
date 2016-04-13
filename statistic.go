@@ -1,48 +1,88 @@
+// TODO.
+// stat map을 정렬하는 과정에서 key(ip address)의 도메인을 구한 뒤
+// 해당 도메인 네임을 새로운 키로 사용하도록 한다.
+// 복수의 ip가 동일한 도메인 네임을 사용하는 경우, 그것을 하나로 취급하기 위해서다.
+
 package main
 
 import (
 	"bytes"
 	"fmt"
-	"net"
 	"sort"
 
+	"github.com/google/gopacket/layers"
 	"github.com/pivotal-golang/bytefmt"
 )
 
-type pair struct {
-	Key   string
-	Value uint64
+const (
+	localhost = `192\.168.*`
+)
+
+type Statistic map[string]*Traffic
+
+type Traffic struct {
+	Address         string
+	InboundTraffic  uint64
+	OutboundTraffic uint64
+	Traffic         uint64
 }
 
-type pairList []pair
+type Traffics []*Traffic
 
-func (p pairList) Len() int           { return len(p) }
-func (p pairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-func (p pairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
+func (t Traffics) Len() int {
+	return len(t)
+}
 
-func printSortedStatisticMap(stat map[string]uint64) {
-	p := make(pairList, len(stat))
+func (t Traffics) Less(i, j int) bool {
+	return t[i].Traffic < t[j].Traffic
+}
 
-	i := 0
-	for k, v := range stat {
-		p[i] = pair{k, v}
-		i++
-	}
+func (t Traffics) Swap(i, j int) {
+	t[i], t[j] = t[j], t[i]
+}
 
-	sort.Sort(sort.Reverse(p))
-	var b bytes.Buffer
+func (stats Statistic) SetTraffic(ip *layers.IPv4, t uint64) {
+	dstIP := ip.DstIP.String()
+	srcIP := ip.SrcIP.String()
 
-	for i, k := range p {
-		if i >= 20 {
-			break
+	if isInbound(localhost, dstIP) {
+		if stats[dstIP] == nil {
+			stats[dstIP] = &Traffic{}
 		}
-		addr, err := net.LookupAddr(k.Key)
-		if err != nil {
-			fmt.Fprintf(&b, "%s = %s\n", k.Key, bytefmt.ByteSize(k.Value))
-		} else {
-			fmt.Fprintf(&b, "%s = %s\n", addr[0], bytefmt.ByteSize(k.Value))
+		stats[dstIP].Address = dstIP
+		stats[dstIP].InboundTraffic += t
+		stats[dstIP].Traffic += t
+	} else {
+		if stats[srcIP] == nil {
+			stats[srcIP] = &Traffic{}
 		}
-
+		stats[srcIP].Address = srcIP
+		stats[srcIP].OutboundTraffic += t
+		stats[srcIP].Traffic += t
 	}
-	fmt.Print(b.String())
+}
+
+func (stats Statistic) SortedString() string {
+	x := make(Traffics, 0, len(stats))
+	for _, stat := range stats {
+		x = append(x, stat)
+	}
+	sort.Sort(sort.Reverse(x))
+	return x.String()
+}
+
+func (t Traffics) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("\033[H\033[2J") // for clear the screen
+	for _, v := range t {
+		fmt.Fprintf(
+			&buf,
+			"[%v] Total Traffic: %v / Inbound: %v / Outbound: %v\n",
+			lookupAddr(v.Address),
+			bytefmt.ByteSize(v.Traffic),
+			bytefmt.ByteSize(v.InboundTraffic),
+			bytefmt.ByteSize(v.OutboundTraffic),
+		)
+	}
+	return buf.String()
 }
