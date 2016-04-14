@@ -30,16 +30,20 @@ func Sniff(packetChannel <-chan gopacket.Packet) {
 	for {
 		select {
 		case packet = <-packetChannel:
-			data = packet.Data()
-			parser.DecodeLayers(data, &decoded)
-			for _, layerType = range decoded {
-				switch layerType {
-				case layers.LayerTypeIPv4:
-					go statistic.SetTraffic(ip4.DstIP, ip4.SrcIP, uint64(len(data)))
-				}
-			}
+			gotPacket()
 		case <-ticker:
 			go statistic.PrintSortedStatisticString()
+		}
+	}
+}
+
+func gotPacket() {
+	data = packet.Data()
+	parser.DecodeLayers(data, &decoded)
+	for _, layerType = range decoded {
+		switch layerType {
+		case layers.LayerTypeIPv4:
+			go statistic.SetTraffic(ip4.DstIP, ip4.SrcIP, uint64(len(data)))
 		}
 	}
 }

@@ -32,7 +32,7 @@ type Traffics []*Traffic
 func (s *Statistic) Get(IP net.IP) *Traffic {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-  IPKey := IPtoUint32(IP)
+	IPKey := IPtoUint32(IP)
 	if s.vars[IPKey] == nil {
 		s.vars[IPKey] = &Traffic{Address: IP}
 	}
