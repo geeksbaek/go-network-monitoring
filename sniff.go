@@ -22,8 +22,7 @@ var (
 // vars for statistic
 var (
 	ticker    = time.Tick(time.Second * 2)
-	statistic = &Statistic{new(sync.RWMutex), make(map[string]*Traffic, 10000000)}
-	dataLen   uint64
+	statistic = &Statistic{new(sync.RWMutex), make(map[uint32]*Traffic, 10000000)}
 )
 
 func Sniff(packetChannel <-chan gopacket.Packet) {
@@ -36,8 +35,7 @@ func Sniff(packetChannel <-chan gopacket.Packet) {
 			for _, layerType = range decoded {
 				switch layerType {
 				case layers.LayerTypeIPv4:
-					dataLen = uint64(len(data))
-					go statistic.SetTraffic(ip4.DstIP, ip4.SrcIP, dataLen)
+					go statistic.SetTraffic(ip4.DstIP, ip4.SrcIP, uint64(len(data)))
 				}
 			}
 		case <-ticker:

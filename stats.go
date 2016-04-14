@@ -12,49 +12,48 @@ import (
 )
 
 var (
-	IPKey     string
+	IPKey     uint32
+	IP        net.IP
 	localhost = []byte{192, 168}
 )
 
 type Statistic struct {
 	mutex *sync.RWMutex
-	vars  map[string]*Traffic
+	vars  map[uint32]*Traffic
 }
 
 type Traffic struct {
-	Address  string
+	Address  net.IP
 	Inbound  uint64
 	Outbound uint64
 }
 
 type Traffics []*Traffic
 
-func (s *Statistic) Get(name string) *Traffic {
+func (s *Statistic) Get(IPKey uint32, IP net.IP) *Traffic {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if s.vars[name] == nil {
-		s.vars[name] = &Traffic{Address: IPKey}
+	if s.vars[IPKey] == nil {
+		s.vars[IPKey] = &Traffic{Address: IP}
 	}
-	return s.vars[name]
+	return s.vars[IPKey]
 }
 
 func (s Statistic) SetTraffic(dstIP, srcIP net.IP, dataLen uint64) {
-	_isInbound := isInbound(localhost, dstIP)
-	if _isInbound {
-		IPKey = dstIP.String()
+	if isInbound(localhost, dstIP) {
+		atomic.AddUint64(&s.Get(IPtoUint32(dstIP), dstIP).Inbound, dataLen)
 	} else {
-		IPKey = srcIP.String()
-	}
-
-	traffic := s.Get(IPKey)
-	if _isInbound {
-		atomic.AddUint64(&traffic.Inbound, dataLen)
-	} else {
-		atomic.AddUint64(&traffic.Outbound, dataLen)
+		atomic.AddUint64(&s.Get(IPtoUint32(srcIP), srcIP).Outbound, dataLen)
 	}
 }
 
 func (s Statistic) PrintSortedStatisticString() {
+	// s.mutex.Lock()
+	// defer s.mutex.Unlock()
+	// ConsoleClear()
+	// for _, v := range s.vars {
+	// 	fmt.Println(v)
+	// }
 	s.mutex.RLock()
 	ts := make(Traffics, 0, len(s.vars))
 	for _, t := range s.vars {
@@ -73,8 +72,8 @@ func (ts Traffics) String() string {
 		sum = v.Inbound + v.Outbound
 		fmt.Fprintf(
 			&buf,
-			"[%v] Traffic: %v / Inbound: %v / Outbound: %v\n",
-			v.Address,
+			"[%s] Traffic: %s / Inbound: %s / Outbound: %s\n",
+			v.Address.String(),
 			bytefmt.ByteSize(sum),
 			bytefmt.ByteSize(v.Inbound),
 			bytefmt.ByteSize(v.Outbound),

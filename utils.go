@@ -27,6 +27,13 @@ func isInbound(inboundPattern, dstIP []byte) bool {
 	return true
 }
 
+func IPtoUint32(ip []byte) uint32 {
+	if len(ip) != 4 {
+		return 0
+	}
+	return uint32(ip[0])<<24 | uint32(ip[1])<<16 | uint32(ip[2])<<8 | uint32(ip[3])
+}
+
 // For Traffics sorting
 func (t Traffics) Len() int {
 	return len(t)
