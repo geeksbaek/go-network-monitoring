@@ -79,10 +79,10 @@ func (s Statistic) PrintSortedStatisticString() {
 
 func (ts Traffics) String() string {
 	var buf bytes.Buffer
-  var sum uint64
+	var sum uint64
 	buf.WriteString("\033[H\033[2J") // for clear the screen
 	for _, v := range ts {
-    sum = v.Inbound+v.Outbound
+		sum = v.Inbound + v.Outbound
 		fmt.Fprintf(
 			&buf,
 			"[%v] Traffic: %v / Inbound: %v / Outbound: %v\n",
