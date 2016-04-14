@@ -7,7 +7,6 @@ import (
 
 var (
 	isInboundBool bool
-	i             int
 )
 
 // ConsoleClear is a clear the console screen.
@@ -25,7 +24,7 @@ func lookupAddr(addr string) string {
 
 func isInbound(localhostPattern, dstIP []byte) bool {
 	isInboundBool = false
-	for i = range localhostPattern {
+	for i := range localhostPattern {
 		if localhostPattern[i] == dstIP[i] {
 			isInboundBool = true
 		} else {

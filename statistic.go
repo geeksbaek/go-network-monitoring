@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"sync"
 
 	"github.com/pivotal-golang/bytefmt"
 )
@@ -14,7 +15,10 @@ var (
 	localhost = []byte{192, 168}
 )
 
-type Statistic map[string]*Traffic
+type Statistic struct {
+	mutex *sync.RWMutex
+	vars  map[string]*Traffic
+}
 
 type Traffic struct {
 	Address  string
@@ -36,33 +40,33 @@ func (t Traffics) Swap(i, j int) {
 	t[i], t[j] = t[j], t[i]
 }
 
-func (s Statistic) SetTraffic(dstIP, srcIP net.IP, traffic uint64) {
-	rwMutex.Lock()
-	defer rwMutex.Unlock()
+func (stats Statistic) SetTraffic(dstIP, srcIP net.IP, traffic uint64) {
+	stats.mutex.Lock()
+	defer stats.mutex.Unlock()
 
 	if isInbound(localhost, dstIP) {
 		IPKey = dstIP.String()
-		if s[IPKey] == nil {
-			s[IPKey] = &Traffic{}
+		if stats.vars[IPKey] == nil {
+			stats.vars[IPKey] = &Traffic{}
 		}
-		s[IPKey].Inbound += traffic
+		stats.vars[IPKey].Inbound += traffic
 	} else {
 		IPKey = srcIP.String()
-		if s[IPKey] == nil {
-			s[IPKey] = &Traffic{}
+		if stats.vars[IPKey] == nil {
+			stats.vars[IPKey] = &Traffic{}
 		}
-		s[IPKey].Outbound += traffic
+		stats.vars[IPKey].Outbound += traffic
 	}
-	s[IPKey].Address = IPKey
+	stats.vars[IPKey].Address = IPKey
 }
 
-func (stats Statistic) PrintSortedString() {
-	rwMutex.Lock()
-	x := make(Traffics, 0, len(stats))
-	for _, stat := range stats {
+func (stats Statistic) PrintSortedStatisticString() {
+	stats.mutex.Lock()
+	x := make(Traffics, 0, len(stats.vars))
+	for _, stat := range stats.vars {
 		x = append(x, stat)
 	}
-	defer rwMutex.Unlock()
+	defer stats.mutex.Unlock()
 	sort.Sort(sort.Reverse(x))
 	fmt.Print(x.String())
 }

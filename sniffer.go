@@ -23,9 +23,8 @@ var (
 
 // vars for statistic
 var (
-	ticker    = time.Tick(time.Second * 1)
-	statistic = make(Statistic, 100000)
-	rwMutex   = new(sync.RWMutex)
+	ticker    = time.Tick(time.Second * 2)
+	statistic = &Statistic{new(sync.RWMutex), make(map[string]*Traffic, 10000000)}
 	traffic   uint64
 )
 
@@ -47,7 +46,7 @@ func Sniff(packetChannel <-chan gopacket.Packet) {
 				}
 			}
 		case <-ticker:
-			go statistic.PrintSortedString()
+			go statistic.PrintSortedStatisticString()
 		}
 	}
 }
