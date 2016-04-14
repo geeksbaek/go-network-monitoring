@@ -1,15 +1,19 @@
 package main
 
 import (
-	_ "fmt"
+	"fmt"
 	"net"
-	"regexp"
+)
+
+var (
+	isInboundBool bool
+	i             int
 )
 
 // ConsoleClear is a clear the console screen.
-// func ConsoleClear() {
-//   fmt.Print("\033[H\033[2J")
-// }
+func ConsoleClear() {
+	fmt.Print("\033[H\033[2J")
+}
 
 func lookupAddr(addr string) string {
 	domain, err := net.LookupAddr(addr)
@@ -19,9 +23,14 @@ func lookupAddr(addr string) string {
 	return domain[0]
 }
 
-func isInbound(localhost, dstIP string) bool {
-	if matched, _ := regexp.MatchString(localhost, dstIP); matched {
-		return true
+func isInbound(localhostPattern, dstIP []byte) bool {
+	isInboundBool = false
+	for i = range localhostPattern {
+		if localhostPattern[i] == dstIP[i] {
+			isInboundBool = true
+		} else {
+			return isInboundBool
+		}
 	}
-	return false
+	return isInboundBool
 }
