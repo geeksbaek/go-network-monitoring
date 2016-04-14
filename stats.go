@@ -12,7 +12,6 @@ import (
 )
 
 var (
-	IP        net.IP
 	localhost = []byte{192, 168}
 )
 
@@ -48,12 +47,6 @@ func (s Statistic) SetTraffic(dstIP, srcIP net.IP, dataLen uint64) {
 }
 
 func (s Statistic) PrintSortedStatisticString() {
-	// s.mutex.Lock()
-	// defer s.mutex.Unlock()
-	// ConsoleClear()
-	// for _, v := range s.vars {
-	// 	fmt.Println(v)
-	// }
 	s.mutex.RLock()
 	ts := make(Traffics, 0, len(s.vars))
 	for _, t := range s.vars {
