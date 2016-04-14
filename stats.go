@@ -12,7 +12,6 @@ import (
 )
 
 var (
-	IPKey     uint32
 	IP        net.IP
 	localhost = []byte{192, 168}
 )
@@ -30,9 +29,10 @@ type Traffic struct {
 
 type Traffics []*Traffic
 
-func (s *Statistic) Get(IPKey uint32, IP net.IP) *Traffic {
+func (s *Statistic) Get(IP net.IP) *Traffic {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+  IPKey := IPtoUint32(IP)
 	if s.vars[IPKey] == nil {
 		s.vars[IPKey] = &Traffic{Address: IP}
 	}
@@ -41,9 +41,9 @@ func (s *Statistic) Get(IPKey uint32, IP net.IP) *Traffic {
 
 func (s Statistic) SetTraffic(dstIP, srcIP net.IP, dataLen uint64) {
 	if isInbound(localhost, dstIP) {
-		atomic.AddUint64(&s.Get(IPtoUint32(dstIP), dstIP).Inbound, dataLen)
+		atomic.AddUint64(&s.Get(dstIP).Inbound, dataLen)
 	} else {
-		atomic.AddUint64(&s.Get(IPtoUint32(srcIP), srcIP).Outbound, dataLen)
+		atomic.AddUint64(&s.Get(srcIP).Outbound, dataLen)
 	}
 }
 
