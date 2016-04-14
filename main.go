@@ -10,7 +10,6 @@ import (
 )
 
 var (
-	dev               = `\Device\NPF_{669726D1-2173-4A7A-89DB-0843CDF048B3}`
 	snapshotLen int32 = 1024
 	promiscuous       = true
 	timeout           = 30 * time.Second
@@ -26,7 +25,12 @@ func main() {
 	selected := SelectDeviceFromUser(devices)
 
 	// Open device
-	handle, err := pcap.OpenLive(devices[selected].Name, snapshotLen, promiscuous, timeout)
+	handle, err := pcap.OpenLive(
+		devices[selected].Name,
+		snapshotLen,
+		promiscuous,
+		timeout,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}

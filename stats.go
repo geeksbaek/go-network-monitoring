@@ -38,18 +38,6 @@ func (s *Statistic) Get(name string) *Traffic {
 	return s.vars[name]
 }
 
-func (t Traffics) Len() int {
-	return len(t)
-}
-
-func (t Traffics) Less(i, j int) bool {
-	return t[i].Inbound+t[i].Outbound < t[j].Inbound+t[j].Outbound
-}
-
-func (t Traffics) Swap(i, j int) {
-	t[i], t[j] = t[j], t[i]
-}
-
 func (s Statistic) SetTraffic(dstIP, srcIP net.IP, dataLen uint64) {
 	_isInbound := isInbound(localhost, dstIP)
 	if _isInbound {

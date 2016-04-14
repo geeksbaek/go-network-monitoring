@@ -26,3 +26,16 @@ func isInbound(inboundPattern, dstIP []byte) bool {
 	}
 	return true
 }
+
+// For Traffics sorting
+func (t Traffics) Len() int {
+	return len(t)
+}
+
+func (t Traffics) Less(i, j int) bool {
+	return t[i].Inbound+t[i].Outbound < t[j].Inbound+t[j].Outbound
+}
+
+func (t Traffics) Swap(i, j int) {
+	t[i], t[j] = t[j], t[i]
+}
