@@ -6,6 +6,7 @@ import (
 	"net"
 	"sort"
 	"sync"
+	"sync/atomic"
 
 	"github.com/pivotal-golang/bytefmt"
 )
@@ -28,6 +29,15 @@ type Traffic struct {
 
 type Traffics []*Traffic
 
+func (s *Statistic) Get(name string) *Traffic {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if s.vars[name] == nil {
+		s.vars[name] = &Traffic{Address: IPKey}
+	}
+	return s.vars[name]
+}
+
 func (t Traffics) Len() int {
 	return len(t)
 }
@@ -40,47 +50,44 @@ func (t Traffics) Swap(i, j int) {
 	t[i], t[j] = t[j], t[i]
 }
 
-func (stats Statistic) SetTraffic(dstIP, srcIP net.IP, traffic uint64) {
-	stats.mutex.Lock()
-	defer stats.mutex.Unlock()
-
-	if isInbound(localhost, dstIP) {
+func (s Statistic) SetTraffic(dstIP, srcIP net.IP, dataLen uint64) {
+	_isInbound := isInbound(localhost, dstIP)
+	if _isInbound {
 		IPKey = dstIP.String()
-		if stats.vars[IPKey] == nil {
-			stats.vars[IPKey] = &Traffic{}
-		}
-		stats.vars[IPKey].Inbound += traffic
 	} else {
 		IPKey = srcIP.String()
-		if stats.vars[IPKey] == nil {
-			stats.vars[IPKey] = &Traffic{}
-		}
-		stats.vars[IPKey].Outbound += traffic
 	}
-	stats.vars[IPKey].Address = IPKey
+
+	traffic := s.Get(IPKey)
+	if _isInbound {
+		atomic.AddUint64(&traffic.Inbound, dataLen)
+	} else {
+		atomic.AddUint64(&traffic.Outbound, dataLen)
+	}
 }
 
-func (stats Statistic) PrintSortedStatisticString() {
-	stats.mutex.Lock()
-	x := make(Traffics, 0, len(stats.vars))
-	for _, stat := range stats.vars {
-		x = append(x, stat)
+func (s Statistic) PrintSortedStatisticString() {
+	s.mutex.RLock()
+	ts := make(Traffics, 0, len(s.vars))
+	for _, t := range s.vars {
+		ts = append(ts, t)
 	}
-	defer stats.mutex.Unlock()
-	sort.Sort(sort.Reverse(x))
-	fmt.Print(x.String())
+	s.mutex.RUnlock()
+	sort.Sort(sort.Reverse(ts))
+	fmt.Print(ts.String())
 }
 
-func (t Traffics) String() string {
+func (ts Traffics) String() string {
 	var buf bytes.Buffer
+  var sum uint64
 	buf.WriteString("\033[H\033[2J") // for clear the screen
-
-	for _, v := range t {
+	for _, v := range ts {
+    sum = v.Inbound+v.Outbound
 		fmt.Fprintf(
 			&buf,
-			"[%v] Total Traffic: %v / Inbound: %v / Outbound: %v\n",
-			lookupAddr(v.Address),
-			bytefmt.ByteSize(v.Inbound+v.Outbound),
+			"[%v] Traffic: %v / Inbound: %v / Outbound: %v\n",
+			v.Address,
+			bytefmt.ByteSize(sum),
 			bytefmt.ByteSize(v.Inbound),
 			bytefmt.ByteSize(v.Outbound),
 		)

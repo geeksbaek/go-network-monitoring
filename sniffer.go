@@ -2,8 +2,7 @@ package main
 
 import (
 	"time"
-
-	"sync"
+  "sync"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -13,7 +12,6 @@ import (
 var (
 	eth       layers.Ethernet
 	ip4       layers.IPv4
-	ip6       layers.IPv6
 	parser    *gopacket.DecodingLayerParser
 	decoded   = []gopacket.LayerType{}
 	packet    gopacket.Packet
@@ -25,11 +23,11 @@ var (
 var (
 	ticker    = time.Tick(time.Second * 2)
 	statistic = &Statistic{new(sync.RWMutex), make(map[string]*Traffic, 10000000)}
-	traffic   uint64
+	dataLen   uint64
 )
 
 func Sniff(packetChannel <-chan gopacket.Packet) {
-	parser = gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &ip6)
+	parser = gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4)
 	for {
 		select {
 		case packet = <-packetChannel:
@@ -37,12 +35,9 @@ func Sniff(packetChannel <-chan gopacket.Packet) {
 			parser.DecodeLayers(data, &decoded)
 			for _, layerType = range decoded {
 				switch layerType {
-				case layers.LayerTypeIPv6:
-					traffic = uint64(len(data))
-					go statistic.SetTraffic(ip6.DstIP, ip6.SrcIP, traffic)
 				case layers.LayerTypeIPv4:
-					traffic = uint64(len(data))
-					go statistic.SetTraffic(ip4.DstIP, ip4.SrcIP, traffic)
+					dataLen = uint64(len(data))
+					go statistic.SetTraffic(ip4.DstIP, ip4.SrcIP, dataLen)
 				}
 			}
 		case <-ticker:
