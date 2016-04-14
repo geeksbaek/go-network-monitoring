@@ -5,10 +5,6 @@ import (
 	"net"
 )
 
-var (
-	isInboundBool bool
-)
-
 // ConsoleClear is a clear the console screen.
 func ConsoleClear() {
 	fmt.Print("\033[H\033[2J")
@@ -22,14 +18,11 @@ func lookupAddr(addr string) string {
 	return domain[0]
 }
 
-func isInbound(localhostPattern, dstIP []byte) bool {
-	isInboundBool = false
-	for i := range localhostPattern {
-		if localhostPattern[i] == dstIP[i] {
-			isInboundBool = true
-		} else {
-			return isInboundBool
+func isInbound(inboundPattern, dstIP []byte) bool {
+	for i := range inboundPattern {
+		if inboundPattern[i] != dstIP[i] {
+			return false
 		}
 	}
-	return isInboundBool
+	return true
 }
