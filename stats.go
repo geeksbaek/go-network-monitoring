@@ -38,7 +38,7 @@ func (s *Statistic) Get(IP net.IP) *Traffic {
 	return s.vars[IPKey]
 }
 
-func (s Statistic) SetTraffic(dstIP, srcIP net.IP, dataLen uint64) {
+func (s *Statistic) SetTraffic(dstIP, srcIP net.IP, dataLen uint64) {
 	if isInbound(localhost, dstIP) {
 		atomic.AddUint64(&s.Get(dstIP).Inbound, dataLen)
 	} else {
@@ -46,7 +46,7 @@ func (s Statistic) SetTraffic(dstIP, srcIP net.IP, dataLen uint64) {
 	}
 }
 
-func (s Statistic) PrintSortedStatisticString() {
+func (s *Statistic) PrintSortedStatisticString() {
 	s.mutex.RLock()
 	ts := make(Traffics, 0, len(s.vars))
 	for _, t := range s.vars {
