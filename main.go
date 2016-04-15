@@ -49,7 +49,7 @@ func SelectDeviceFromUser(devices []pcap.Interface) (selected int) {
 	fmt.Println(">> Please the network card to sniff packets.")
 	for i, device := range devices {
 		fmt.Printf("\n\t%d. Name : %s\n\t   Description : %s\n\t   IP address : %v\n",
-			i+1, device.Name, device.Description, device.Addresses[1].IP)
+			i+1, device.Name, device.Description, device.Addresses)
 	}
 	fmt.Print("\n>> ")
 	fmt.Scanf("%d", &selected)
