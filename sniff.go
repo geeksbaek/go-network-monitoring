@@ -3,6 +3,7 @@ package main
 import (
 	"sync"
 	"time"
+	"sync/atomic"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -22,7 +23,11 @@ var (
 // vars for statistic
 var (
 	ticker    = time.Tick(time.Second * 2)
-	statistic = &Statistic{new(sync.RWMutex), make(map[uint32]*Traffic, 10000000)}
+	statistic = &Statistic{
+		mutex: new(sync.RWMutex), 
+		vars: make(map[uint32]*Traffic),
+		total: uint64(0),
+	}
 )
 
 func Sniff(packetChannel <-chan gopacket.Packet) {
@@ -44,6 +49,8 @@ func gotPacket() {
 		switch layerType {
 		case layers.LayerTypeIPv4:
 			go statistic.SetTraffic(ip4.DstIP, ip4.SrcIP, uint64(len(data)))
+		default:
+			atomic.AddUint64(&statistic.total, uint64(len(data)))
 		}
 	}
 }

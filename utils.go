@@ -18,17 +18,13 @@ func lookupAddr(addr string) string {
 	return domain[0]
 }
 
-func isInbound(inboundPattern, dstIP []byte) bool {
-	if len(dstIP) != 4 {
-		return false
-	}
-	
-	for i := range inboundPattern {
-		if inboundPattern[i] != dstIP[i] {
-			return false
+func MeAndYou(dstIP, srcIP []byte) (net.IP, net.IP) {
+	for i := range localhost {
+		if localhost[i] != dstIP[i] {
+			return srcIP, dstIP
 		}
-	}
-	return true
+	}	
+	return dstIP, srcIP	
 }
 
 func IPtoUint32(ip []byte) uint32 {

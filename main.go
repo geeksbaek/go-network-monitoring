@@ -9,7 +9,7 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-var (
+const (
 	snapshotLen int32 = 1024
 	promiscuous       = true
 	timeout           = 30 * time.Second
