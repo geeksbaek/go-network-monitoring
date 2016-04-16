@@ -1,9 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"sync"
-	"time"
 	"sync/atomic"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -24,9 +25,8 @@ var (
 var (
 	ticker    = time.Tick(time.Second * 2)
 	statistic = &Statistic{
-		mutex: new(sync.RWMutex), 
-		vars: make(map[uint32]*Traffic),
-		total: uint64(0),
+		mutex: new(sync.RWMutex),
+		vars:  make(map[uint32]*Traffic),
 	}
 )
 
@@ -37,7 +37,7 @@ func Sniff(packetChannel <-chan gopacket.Packet) {
 		case packet = <-packetChannel:
 			gotPacket()
 		case <-ticker:
-			go statistic.PrintSortedStatisticString()
+			go fmt.Print(statistic.SortedStatisticString())
 		}
 	}
 }

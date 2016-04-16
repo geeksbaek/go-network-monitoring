@@ -12,6 +12,10 @@ import (
 	"github.com/pivotal-golang/bytefmt"
 )
 
+const (
+	maxDisplayLine = 5
+)
+
 var (
 	// localhost = []byte{172, 31}
 	localhost = []byte{192, 168}
@@ -37,22 +41,27 @@ type ConnStatistic struct {
 
 type ConnTraffic struct {
 	Address  net.IP
+	Domain   string
 	Inbound  uint64
 	Outbound uint64
 }
 
-type Traffics []*Traffic
+type (
+	Traffics     []*Traffic
+	ConnTraffics []*ConnTraffic
+)
 
 func (s *Statistic) Get(IP net.IP) *Traffic {
+	IPKey := IPtoUint32(IP)
+	
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	IPKey := IPtoUint32(IP)
 	if s.vars[IPKey] == nil {
 		s.vars[IPKey] = &Traffic{
 			Address: IP,
 			MostConn: &ConnStatistic{
 				mutex: new(sync.RWMutex),
-				vars:  make(map[uint32]*ConnTraffic),
+				vars:  make(map[uint32]*ConnTraffic, 100),
 			},
 		}
 	}
@@ -60,21 +69,18 @@ func (s *Statistic) Get(IP net.IP) *Traffic {
 }
 
 func (s *ConnStatistic) Get(IP net.IP) *ConnTraffic {
+	IPKey := IPtoUint32(IP)
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	IPKey := IPtoUint32(IP)
 	if s.vars[IPKey] == nil {
-		s.vars[IPKey] = &ConnTraffic{
-			Address: IP,
-		}
+		s.vars[IPKey] = &ConnTraffic{Address: IP}
 	}
 	return s.vars[IPKey]
 }
 
 func (s *Statistic) SetTraffic(dstIP, srcIP net.IP, dataLen uint64) {
-	me, you := MeAndYou(dstIP, srcIP)
-
-	if me.Equal(dstIP) {
+	if me, you := MeAndYou(dstIP, srcIP); me.Equal(dstIP) {
 		atomic.AddUint64(&s.Get(me).Inbound, dataLen)
 		atomic.AddUint64(&s.Get(me).MostConn.Get(you).Outbound, dataLen)
 	} else {
@@ -83,7 +89,7 @@ func (s *Statistic) SetTraffic(dstIP, srcIP net.IP, dataLen uint64) {
 	}
 }
 
-func (s *Statistic) PrintSortedStatisticString() {
+func (s *Statistic) SortedStatisticString() string {
 	s.mutex.RLock()
 	ts := make(Traffics, 0, len(s.vars))
 	for _, t := range s.vars {
@@ -91,24 +97,58 @@ func (s *Statistic) PrintSortedStatisticString() {
 	}
 	s.mutex.RUnlock()
 	sort.Sort(sort.Reverse(ts))
-	fmt.Print(ts.String())
+	return ts.String()
 }
 
 func (ts Traffics) String() string {
 	var buf bytes.Buffer
-	var sum uint64
 
 	buf.WriteString("\033[H\033[2J") // for clear the screen
-
-	fmt.Fprintf(&buf, "Running Goroutines : %d\n", runtime.NumGoroutine())
+	fmt.Fprintf(&buf, "Running Goroutines : %d / Total Traffic : %s\n\n",
+		runtime.NumGoroutine(),
+		bytefmt.ByteSize(atomic.LoadUint64(&statistic.total)),
+	)
 
 	for _, v := range ts {
-		sum = v.Inbound + v.Outbound
 		fmt.Fprintf(
 			&buf,
-			"[%s] Traffic: %-7s / Inbound: %-7s / Outbound: %-7s\n",
+			"[%s] Traffic: %s / Inbound: %s / Outbound: %s\n%s\n",
 			v.Address.String(),
-			bytefmt.ByteSize(sum),
+			bytefmt.ByteSize(v.Inbound+v.Outbound),
+			bytefmt.ByteSize(v.Inbound),
+			bytefmt.ByteSize(v.Outbound),
+			v.MostConn.SortedStatisticString(),
+		)
+	}
+	return buf.String()
+}
+
+func (s *ConnStatistic) SortedStatisticString() string {
+	s.mutex.RLock()
+	ts := make(ConnTraffics, 0, len(s.vars))
+	for _, t := range s.vars {
+		ts = append(ts, t)
+	}
+	s.mutex.RUnlock()
+	sort.Sort(sort.Reverse(ts))
+	return ts.String()
+}
+
+func (ts ConnTraffics) String() string {
+	var buf bytes.Buffer
+
+	for i, v := range ts {
+		if i > maxDisplayLine {
+			break
+		}
+
+		fmt.Fprintf(
+			&buf,
+			"%c[%s] Traffic: %s / Inbound: %s / Outbound: %s\n",
+			GetBoxDrawingChar(i, maxDisplayLine, len(ts)),
+			//v.Domain,
+			lookupAddr(v.Address.String()),
+			bytefmt.ByteSize(v.Inbound+v.Outbound),
 			bytefmt.ByteSize(v.Inbound),
 			bytefmt.ByteSize(v.Outbound),
 		)
