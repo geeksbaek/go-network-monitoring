@@ -19,6 +19,10 @@ func lookupAddr(addr string) string {
 }
 
 func isInbound(inboundPattern, dstIP []byte) bool {
+	if len(dstIP) != 4 {
+		return false
+	}
+	
 	for i := range inboundPattern {
 		if inboundPattern[i] != dstIP[i] {
 			return false

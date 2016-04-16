@@ -7,11 +7,13 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
+	"runtime"
 
 	"github.com/pivotal-golang/bytefmt"
 )
 
 var (
+	// localhost = []byte{172, 31}
 	localhost = []byte{192, 168}
 )
 
@@ -60,12 +62,16 @@ func (s *Statistic) PrintSortedStatisticString() {
 func (ts Traffics) String() string {
 	var buf bytes.Buffer
 	var sum uint64
+	
 	buf.WriteString("\033[H\033[2J") // for clear the screen
+	
+	fmt.Fprintf(&buf, "Running Goroutines : %d\n", runtime.NumGoroutine())
+	
 	for _, v := range ts {
 		sum = v.Inbound + v.Outbound
 		fmt.Fprintf(
 			&buf,
-			"[%s] Traffic: %s / Inbound: %s / Outbound: %s\n",
+			"[%s] Traffic: %-7s / Inbound: %-7s / Outbound: %-7s\n",
 			v.Address.String(),
 			bytefmt.ByteSize(sum),
 			bytefmt.ByteSize(v.Inbound),
