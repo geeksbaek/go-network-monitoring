@@ -40,7 +40,10 @@ func main() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
 	// Infinity loop for sniff packets
-	Sniff(packetSource.Packets())
+	go Sniff(packetSource.Packets())
+	
+	// Run HTTP Server
+	Serve()
 }
 
 func SelectDeviceFromUser(devices []pcap.Interface) (selected int) {
