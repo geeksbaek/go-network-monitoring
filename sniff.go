@@ -1,8 +1,6 @@
 package main
 
 import (
-	"sync"
-
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
@@ -17,10 +15,7 @@ var (
 )
 
 // vars for statistic
-var flow = &Flow{
-	Vars:  map[Endpoints]Traffic{},
-	Mutex: new(sync.RWMutex),
-}
+var flows Flows
 
 func Sniff(packetChannel <-chan gopacket.Packet) {
 	parser = gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4)
@@ -35,11 +30,11 @@ func gotPacket(packet gopacket.Packet) {
 	for _, layerType := range decoded {
 		switch layerType {
 		case layers.LayerTypeIPv4:
-			go flow.Add(Endpoints{ip4.SrcIP.String(), ip4.DstIP.String()},
-				Traffic(len(data)))
+			go flows.Append(&Endpoints{ip4.SrcIP.String(), ip4.DstIP.String()},
+				&Traffic{Total: uint64(len(data))})
 		case layers.LayerTypeIPv6:
-			go flow.Add(Endpoints{ip6.SrcIP.String(), ip6.DstIP.String()},
-				Traffic(len(data)))
+			go flows.Append(&Endpoints{ip6.SrcIP.String(), ip6.DstIP.String()},
+				&Traffic{Total: uint64(len(data))})
 		}
 	}
 }

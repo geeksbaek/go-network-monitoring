@@ -15,6 +15,10 @@ const (
 	timeout           = 30 * time.Second
 )
 
+var (
+	TimeFrom = time.Now()
+)
+
 func main() {
 	// Find all devices
 	devices, err := pcap.FindAllDevs()
@@ -41,7 +45,7 @@ func main() {
 
 	// Infinity loop for sniff packets
 	go Sniff(packetSource.Packets())
-	
+
 	// Run HTTP Server
 	Serve()
 }
